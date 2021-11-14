@@ -12,7 +12,9 @@ This is a repository to highlight the simplicity of deploying your own Kafka clu
 
 ## Background
 
-Standard Readme started with the issue originally posed by [@maxogden](https://github.com/maxogden) over at [feross/standard](https://github.com/feross/standard) in [this issue](https://github.com/feross/standard/issues/141), about whether or not a tool to standardize readmes would be useful. A lot of that discussion ended up in [zcei's standard-readme](https://github.com/zcei/standard-readme/issues/1) repository. While working on maintaining the [IPFS](https://github.com/ipfs) repositories, I needed a way to standardize Readmes across that organization. This specification started as a result of that.
+Kafka, Druid and Superset as a combination allows for visualizations on top of queryable data streams. Connecting the components allow for strong visualizations that can help drive business insights. The usage of this repository is to deploy the three tech components using Docker-compose, and have them auto-configured such that you can simply use Apache Superset to view visualizations.
+
+Scroll down to the usage section below to deploy the server components and load up the data and visualizations of this repository.
 
 ## Prerequisites
 
@@ -59,6 +61,12 @@ To load data into the Kafka topics, as well as create the Kafka topics, configur
 
 ```
 docker run -e BOOTSTRAP_SERVERS="localhost:9092,localhost:9101" -e DATA_FILES="data/day1.json" -e UPLOAD_DELAY=5 -e KAFKA_TOPIC="ocean_data" -e SPLITTING_KEY="all_data" -e DATA_KEY="data.spotterId" --network="host" kafka-producer    
+```
+
+## Cleanup
+
+```
+docker-compose -f docker/docker-compose.yml down -v
 ```
 
 ### Contributors

@@ -10,24 +10,44 @@ volumes:
   router_var: {}
   druid_shared: {}
 
+networks:
+  proxynet:
+    name: kafka-visualizer
+
 services:
 
+  druid-configurer:
+    container_name: druid-configurer
+    build:
+      network: host
+      context: druid-configurer/.
+    environment:
+      INITIAL_DELAY: 90
+      DRUID_COORDINATOR_API: druid-coordinator:8081
+    depends_on:
+      - druid-coordinator
+    networks:
+      - proxynet
+    
   kafka-producer:
     container_name: kafka-producer
+    #network_mode: "host"
     build: 
       network: host
       context: kafka-producer/.
     environment:
-      BOOTSTRAP_SERVERS: '127.0.0.1:9092,127.0.0.1:9101'
+      BOOTSTRAP_SERVERS: 'broker:9092,broker:9101'
       DATA_FILES: data/day1.json
-      INITIAL_DELAY: 120
+      INITIAL_DELAY: 60
       UPLOAD_DELAY: 5
       KAFKA_TOPIC: ocean_data
-      SPLITTING_KEY: all_data
+      SPLITTING_KEY: all_data.data.waves
       DATA_KEY: data.spotterId
     depends_on:
       - broker
       - control-center
+    networks:
+      - proxynet
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.0
@@ -38,8 +58,12 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - proxynet
 
   broker:
+    #networks:
+    # - app-network
     image: confluentinc/cp-server:7.0.0
     hostname: broker
     container_name: broker
@@ -52,7 +76,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://broker:9092
       KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
@@ -67,6 +91,8 @@ services:
       CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
       CONFLUENT_METRICS_ENABLE: 'true'
       CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    networks:
+      - proxynet
 
   schema-registry:
     image: confluentinc/cp-schema-registry:7.0.0
@@ -80,6 +106,8 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'broker:29092'
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8071
+    networks:
+      - proxynet
 
   connect:
     image: cnfldemos/cp-server-connect-datagen:0.5.0-6.2.0
@@ -111,6 +139,8 @@ services:
       CONNECT_CONSUMER_INTERCEPTOR_CLASSES: "io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor"
       CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
       CONNECT_LOG4J_LOGGERS: org.apache.zookeeper=ERROR,org.I0Itec.zkclient=ERROR,org.reflections=ERROR
+    networks:
+      - proxynet
 
   control-center:
     image: confluentinc/cp-enterprise-control-center:7.0.0
@@ -134,6 +164,8 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
+    networks:
+      - proxynet
 
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:7.0.0
@@ -157,6 +189,8 @@ services:
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: 'true'
       KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: 'true'
+    networks:
+      - proxynet
 
   ksqldb-cli:
     image: confluentinc/cp-ksqldb-cli:7.0.0
@@ -167,6 +201,8 @@ services:
       - ksqldb-server
     entrypoint: /bin/sh
     tty: true
+    networks:
+      - proxynet
 
   ksql-datagen:
     image: confluentinc/ksqldb-examples:7.0.0
@@ -189,6 +225,8 @@ services:
       STREAMS_BOOTSTRAP_SERVERS: broker:29092
       STREAMS_SCHEMA_REGISTRY_HOST: schema-registry
       STREAMS_SCHEMA_REGISTRY_PORT: 8071
+    networks:
+      - proxynet
 
   rest-proxy:
     image: confluentinc/cp-kafka-rest:7.0.0
@@ -204,6 +242,8 @@ services:
       KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8072"
       KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8071'
+    networks:
+      - proxynet
 
   # druid components
   postgres:
@@ -215,6 +255,8 @@ services:
       - POSTGRES_PASSWORD=FoolishPassword
       - POSTGRES_USER=druid
       - POSTGRES_DB=druid
+    networks:
+      - proxynet
 
   druid-coordinator:
     image: apache/druid:0.22.0
@@ -222,7 +264,10 @@ services:
     volumes:
       - druid_shared:/opt/shared
       - coordinator_var:/opt/druid/var
+    links:
+      - broker
     depends_on: 
+      - broker
       - zookeeper
       - postgres
     ports:
@@ -231,6 +276,8 @@ services:
       - coordinator
     env_file:
       - environment
+    networks:
+      - proxynet
 
   druid-broker:
     image: apache/druid:0.22.0
@@ -247,7 +294,8 @@ services:
       - broker
     env_file:
       - environment
-
+    networks:
+      - proxynet
   historical:
     image: apache/druid:0.22.0
     container_name: historical
@@ -264,7 +312,8 @@ services:
       - historical
     env_file:
       - environment
-
+    networks:
+      - proxynet
   middlemanager:
     image: apache/druid:0.22.0
     container_name: middlemanager
@@ -282,7 +331,8 @@ services:
       - middleManager
     env_file:
       - environment
-
+    networks:
+      - proxynet
   router:
     image: apache/druid:0.22.0
     container_name: router
@@ -298,3 +348,5 @@ services:
       - router
     env_file:
       - environment
+    networks:
+      - proxynet

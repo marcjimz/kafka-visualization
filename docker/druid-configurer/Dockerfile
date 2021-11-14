@@ -1,15 +1,5 @@
-FROM docker pull curlimages/curl
+FROM curlimages/curl
 
-RUN apk add --no-cache --virtual .build-deps \
-    gcc \
-    musl-dev \
-    && apk add --no-cache librdkafka-dev
+COPY conf/supervisor-spec.json supervisor-spec.json
 
-
-COPY requirements.txt requirements.txt 
-RUN pip install -r requirements.txt
-
-COPY data/ data/
-COPY app/ app/
-
-ENTRYPOINT ["sh", "-c", "python app/main.py --bootstrap-servers $BOOTSTRAP_SERVERS --data-files $DATA_FILES --upload-delay $UPLOAD_DELAY --topic $KAFKA_TOPIC --splitting-key $SPLITTING_KEY --data-key $DATA_KEY"]
+ENTRYPOINT ["sh", "-c", "sleep $INITIAL_DELAY && curl -X POST -H 'Content-Type: application/json' -d @supervisor-spec.json http://$DRUID_COORDINATOR_API/druid/indexer/v1/supervisor -i"]

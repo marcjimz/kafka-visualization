@@ -1,0 +1,72 @@
+{
+    "type": "kafka",
+    "spec": {
+      "ioConfig": {
+        "type": "kafka",
+        "consumerProperties": {
+          "bootstrap.servers": "broker:9092"
+        },
+        "topic": "ocean_data",
+        "inputFormat": {
+          "type": "json"
+        },
+        "useEarliestOffset": true
+      },
+      "tuningConfig": {
+        "type": "kafka"
+      },
+      "dataSchema": {
+        "dataSource": "ocean_data",
+        "timestampSpec": {
+          "column": "timestamp",
+          "format": "iso"
+        },
+        "dimensionsSpec": {
+          "dimensions": [
+            {
+              "type": "double",
+              "name": "significantWaveHeight"
+            },
+            {
+              "type": "double",
+              "name": "peakPeriod"
+            },
+            {
+              "type": "double",
+              "name": "meanPeriod"
+            },
+            {
+              "type": "double",
+              "name": "peakDirection"
+            },
+            {
+              "type": "double",
+              "name": "peakDirectionalSpread"
+            },
+            {
+              "type": "double",
+              "name": "meanDirection"
+            },
+            {
+              "type": "double",
+              "name": "meanDirectionalSpread"
+            },
+            {
+              "type": "double",
+              "name": "latitude"
+            },
+            {
+              "type": "double",
+              "name": "longitude"
+            },
+            "spotterId"
+          ]
+        },
+        "granularitySpec": {
+          "queryGranularity": "none",
+          "rollup": false,
+          "segmentGranularity": "hour"
+        }
+      }
+    }
+  }

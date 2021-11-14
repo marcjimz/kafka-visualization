@@ -19,8 +19,6 @@ parser.add_argument("--data-files", help = "Location on disk of data that is to 
 parser.add_argument("--upload-delay", help = "Speed in seconds of a delay between each file entry of the file", default=60, required=False)
 parser.add_argument("--initial-delay", help = "Speed in seconds of a delay before the upload", default=5, required=False)
 parser.add_argument("--topic", help = "Kafka topic to upload to", required=True)
-parser.add_argument("--splitting-key", help = "Key to pivot the data on, if this is not set then nothing will happen to split", required=False, default=None)
-parser.add_argument("--data-key", help = "Key to pivot to submit the data from, should be in the root of the event", required=False, default=None)
 
 # parse the arguments from standard input
 args = parser.parse_args()
@@ -36,10 +34,6 @@ if args.topic:
     topic = args.topic
 if args.initial_delay:
     initial_delay = int(args.initial_delay)
-if args.splitting_key:
-    splitting_key = args.splitting_key
-if args.data_key:
-    data_key = args.data_key
 else:
     data_key = None
   
@@ -89,20 +83,18 @@ for file in data_files:
     key = None
 
 
-    # We understand the data is in this format given a key
-    if splitting_key is not None:
-        tiers = splitting_key.split('.')
-        for tier in tiers:
-            data = data[tier]
+    # We understand the data is in this format given a key, so we iterate and split:
+    
+    records = []
+    for devices in data['all_data']:
+        spotterId = devices['data']['spotterId']
+        for waves in devices['data']['waves']:
+            waves['spotterId'] = spotterId
+            records.append(waves)
+
     print("Processing %s # of records..." % str(len(data)))
-    for input in data:
-        if data_key is not None:
-            keys = data_key.split('.')
-            keyView = input
-            for k in keys:
-                keyView = keyView[k]
-            key = keyView
-        producer.produce(topic, key=key, value=json.dumps(input), on_delivery=acked)
+    for input in records:
+        producer.produce(topic, key=input['spotterId'], value=json.dumps(input), on_delivery=acked)
         producer.poll(1)
 
 # Wait up to 1 second for events. Callbacks will be invoked during
