@@ -157,3 +157,5 @@ This piece is TBD!
 1. The deployment and seeding of Kafka topics is time based, it could raise a race condition. In future we should move these to readiness checks to ensure the clusters are available, and create them as required.
 2. Superset auto-refreshing of dashboard and data.
 3. Reduction of unused components, not all components are used here and this can be taxing on a single server.
+4. Actual analytics on the data - the data itself is interesting and probably very useful, so we can demonstrate some very impactful insights from this data. Pairing that with additional views of Superset.
+5. Proper instantiation of Superset - once the dashboard is created, I would want to setup an init container to configure Superset to have this automatically loaded, to ensure auto-deployments.
