@@ -15,6 +15,7 @@ Scroll down to the usage section below to deploy the server components and load 
 * Internet connectivity
 * Networking and Kafka on Docker
 * Install curl (optional)
+* MapBox account & API key; please substitute this in at line 48 of docker/superset/superset-env file to set *MAPBOX_API_KEY*
 
 ## Install
 
