@@ -2,14 +2,6 @@
 
 This is a repository to highlight the simplicity of deploying your own Kafka cluster, as well as your own Apache Druid and Apache Superset, to highlight the combination of streaming and visualization capabilities that are possible.
 
-## Table of Contents
-
-- [Background](#background)
-- [Install](#install)
-	- [Deploy the Services](#deploy)
-- [Usage](#usage)
-- [Contributing](#contributing)
-
 ## Background
 
 Kafka, Druid and Superset as a combination allows for visualizations on top of queryable data streams. Connecting the components allow for strong visualizations that can help drive business insights. The usage of this repository is to deploy the three tech components using Docker-compose, and have them auto-configured such that you can simply use Apache Superset to view visualizations.
@@ -49,9 +41,9 @@ To start the Kafka visualizer, run the following command:
 Please give this about 2 minutes to load. This will take care of the following automations:
 
 1. Deployment of Kafka cluster, Druid cluster, as well as the Superset cluster
-2. Creation of the Kafka cluster topics
+2. Creation of the Kafka cluster topics as a Docker job
 3. Uploading of the Day1 JSON into the Kafka topic
-4. Configuration of Druid to Supervise the ocean_data topic
+4. Configuration of Druid to Supervise the ocean_data topic as a Docker job
 5. Auto-configuration of Apache Superset to reference MapBox API
 
 The URLs to access are as follows:
