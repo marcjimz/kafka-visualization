@@ -1,6 +1,15 @@
 ---
 version: '2'
 
+x-superset-image: &superset-image apache/superset:739d8418a72ffce5f6e07fc649afe54d1b4fc658
+x-superset-depends-on: &superset-depends-on
+  - db
+  - redis
+x-superset-volumes: &superset-volumes
+  # /app/pythonpath_docker will be appended to the PYTHONPATH in the final container
+  - ./superset/docker:/app/docker
+  - superset_home:/app/superset_home
+
 volumes:
   metadata_data: {}
   middle_var: {}
@@ -9,6 +18,12 @@ volumes:
   coordinator_var: {}
   router_var: {}
   druid_shared: {}
+  superset_home:
+    external: false
+  db_home:
+    external: false
+  redis:
+    external: false
 
 networks:
   proxynet:
@@ -348,5 +363,74 @@ services:
       - router
     env_file:
       - environment
+    networks:
+      - proxynet
+
+  #superset components
+  redis:
+    image: redis:latest
+    container_name: superset_cache
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+    networks:
+      - proxynet
+
+  db:
+    env_file: superset/superset-env
+    image: postgres:10
+    container_name: superset_db
+    restart: unless-stopped
+    volumes:
+      - db_home:/var/lib/postgresql/data
+    networks:
+      - proxynet
+
+  superset:
+    env_file: superset/superset-env
+    image: *superset-image
+    container_name: superset_app
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    user: "root"
+    restart: unless-stopped
+    ports:
+      - 8088:8088
+    depends_on: *superset-depends-on
+    volumes: *superset-volumes
+    networks:
+      - proxynet
+
+  superset-init:
+    image: *superset-image
+    container_name: superset_init
+    command: ["/app/docker/docker-init.sh"]
+    env_file: superset/superset-env
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    networks:
+      - proxynet
+
+  superset-worker:
+    image: *superset-image
+    container_name: superset_worker
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    env_file: superset/superset-env
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
+    networks:
+      - proxynet
+
+  superset-worker-beat:
+    image: *superset-image
+    container_name: superset_worker_beat
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    env_file: superset/superset-env
+    restart: unless-stopped
+    depends_on: *superset-depends-on
+    user: "root"
+    volumes: *superset-volumes
     networks:
       - proxynet

@@ -33,44 +33,127 @@ Please ensure you have all of the pre-requisites. If you are unable to run Docke
 This step requires you to leverage docker-compose, similarly:
 
 ```
-docker-compose -f docker/docker-compose.yml up -d
+./kafka-visualizer.sh setup
 ```
-
-You will see a number of pull requests happening against the docker registries; this will take several minutes to complete. You can validate the install when running the command and seeing all of the services in the **Up** state:
-
-```
-docker-compose -f docker/docker-compose.yml ps
-```
-
-You will also require the docker image to product Kafka messages. Run this command to build it:
-
-```
-cd docker/kafka-producer
-docker build . -t kafka-producer
-```
-
-### Configuring the Kafka Topics
-
-1. Follow the instructions highlighted @ [Confluent](https://docs.confluent.io/platform/current/quickstart/ce-docker-quickstart.html?utm_medium=sem&utm_source=google&utm_campaign=ch.sem_br.brand_tp.prs_tgt.confluent-brand_mt.xct_rgn.namer_lng.eng_dv.all_con.confluent-docker&utm_term=confluent%20kafka%20docker&creative=&device=c&placement=&gclid=Cj0KCQiA4b2MBhD2ARIsAIrcB-R6KLxJrrHSPWOdIz5B107UqyDB79ovSCa9i9nG_gx-dLByGnnFsGEaApN8EALw_wcB#step-2-create-ak-topics-for-storing-your-data)
-2. Use the same instructions to create a topic for **ocean-data**
-
 
 ## Usage
 
-To load data into the Kafka topics, as well as create the Kafka topics, configure and run the following command:
+### Infrastructure Deployment
+
+To start the Kafka visualizer, run the following command:
 
 ```
-docker run -e BOOTSTRAP_SERVERS="localhost:9092,localhost:9101" -e DATA_FILES="data/day1.json" -e UPLOAD_DELAY=5 -e KAFKA_TOPIC="ocean_data" -e SPLITTING_KEY="all_data" -e DATA_KEY="data.spotterId" --network="host" kafka-producer    
+./kafka-visualizer.sh start
 ```
+
+Please give this about 2 minutes to load. This will take care of the following automations:
+
+1. Deployment of Kafka cluster, Druid cluster, as well as the Superset cluster
+2. Creation of the Kafka cluster topics
+3. Uploading of the Day1 JSON into the Kafka topic
+4. Configuration of Druid to Supervise the ocean_data topic
+5. Auto-configuration of Apache Superset to reference MapBox API
+
+The URLs to access are as follows:
+
+* http://localhost:9021/clusters for Kafka
+* http://localhost:8888/unified-console.html# for Druid
+* http://localhost:8088/login/ for Superset
+
+You can check the status such as:
+
+```
+./kafka-visualizer.sh status
+```
+
+**NOTE: There is a race condition on the deployment of superset that results in corrupt database files. You will know this has happened when you have an HTTP500 on Superset login page. Not sure of the root cause, there's reported issues on it such as @ https://github.com/apache/superset/issues/14329. Did not get much time to dig in.**
+
+Once the commands run and all is setup, we will need to create the database, dataset and charts within Superset.
+
+### Configuration of Apache Superset
+
+Login credentials are default, admin/admin. 
+
+![Superset](img/superset-1.png)
+
+Create a database with the following parameters, using *druid://druid-broker:8082/druid/v2/sql* as the host:
+
+![Superset](img/superset-2.png)
+
+Now go to Data -> Datasets, and create a dataset.
+
+![Superset](img/superset-3.png)
+
+Go to Charts, and create new chart. We select MapBox to take advantage of the Longtitude / Latitude coordinates. Hit create:
+
+![Superset](img/superset-4.png)
+
+We correct the attributes for latitude and longtitude, and observe a map is created with coordinates:
+
+![Superset](img/superset-5.png)
+
+Note the # of records that are cited (~2000)
+
+### Validation
+
+First, let's confirm the # of records we have from Day 1.
+
+#### Druid Validation
+
+Navigate to druid @ http://localhost:8888/unified-console.html#query
+
+You can run the following query:
+
+```
+SELECT
+  COUNT(*) AS "Count"
+FROM ocean_data
+```
+
+You should see:
+
+![Druid](img/validation-druid.png)
+
+#### Kafka Validation
+
+Navigate to kafka @ topics and make note of the last offset:
+
+![Kafka](img/validation-kafka.png)
+
+### Upload Day 2 Data
+
+Run the utility to upload day 2 data:
+
+```
+./kafka-visualizer.sh upload data/day2.json
+```
+
+You should see a number of messages suggesting the data was uploaded to the kafka topic.
+
+#### Kafka Confirmation
+
+We should see the index offsets increase about ~2x, similarly:
+
+![Kafka](img/confirmation-kafka.png)
+
+#### Druid Confirmation
+
+We should be able to run the same query, and confirm the increase in messages:
+
+![Druid](img/confirmation-druid.png)
+
+#### Superset Confirmation
+
+This piece is TBD!
 
 ## Cleanup
 
 ```
-docker-compose -f docker/docker-compose.yml down -v
+./kafka-visualizer.sh stop
 ```
 
-### Contributors
+## Future Features for Consideration
 
-This project exists thanks to all the people who contribute. 
-<a href="https://github.com/RichardLitt/standard-readme/graphs/contributors"><img src="https://opencollective.com/standard-readme/contributors.svg?width=890&button=false" /></a>
-
+1. The deployment and seeding of Kafka topics is time based, it could raise a race condition. In future we should move these to readiness checks to ensure the clusters are available, and create them as required.
+2. Superset auto-refreshing of dashboard and data.
+3. Reduction of unused components, not all components are used here and this can be taxing on a single server.
