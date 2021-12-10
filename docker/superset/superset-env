@@ -45,5 +45,5 @@ SUPERSET_LOAD_EXAMPLES=no
 CYPRESS_CONFIG=false
 SUPERSET_PORT=8088
 
-MAPBOX_API_KEY="pk.eyJ1IjoibWFyY2ppbXoiLCJhIjoiY2t2eXAwcmY2MDlsNzJ0bXEwZGM0dmNsOSJ9.6WpuXxHUPhpTNQN0mNU7UQ"
+MAPBOX_API_KEY=""
 SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://superset:superset@superset_postgres_1/superset"
